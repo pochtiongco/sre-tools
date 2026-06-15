@@ -1,7 +1,3 @@
-# Health Checker - monitors URL and posts alerts to Teams
-# Author: Poch Tiongco
-# Version: 1.0
-
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
