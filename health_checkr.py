@@ -1,3 +1,6 @@
+#Health Checker
+#Author: Poch Tiongco
+
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
