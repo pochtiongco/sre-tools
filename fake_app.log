@@ -1,0 +1,10 @@
+2026-06-15 01:00:01 INFO Application started
+2026-06-15 01:05:23 INFO User login successful
+2026-06-15 01:10:45 WARNING High memory usage detected
+2026-06-15 01:15:12 ERROR Database connection failed
+2026-06-15 01:16:00 ERROR Database connection failed
+2026-06-15 01:17:30 INFO Retrying database connection
+2026-06-15 01:18:00 ERROR Database connection failed
+2026-06-15 01:20:00 WARNING Response time degraded
+2026-06-15 01:25:00 INFO Database connection restored
+2026-06-15 01:30:00 INFO Application running normally
