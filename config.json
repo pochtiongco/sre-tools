@@ -1,6 +1,5 @@
 {
   "targets": ["https://www.google.com", "https://www.github.com"],
   "slow_threshold": 2.0,
-  "webhook_url": "placeholder url"
-
+  "webhook_url": "placeholder"
 }
