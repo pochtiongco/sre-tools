@@ -3,6 +3,7 @@ import json
 import urllib3
 import argparse
 
+from playwright.sync_api import expect
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from datetime import datetime
@@ -13,25 +14,37 @@ with open("config.json", "r") as f:
 WEBHOOK_URL = config["webhook_url"]
 SLOW_THRESHOLD = config["slow_threshold"]
 targets = config["targets"]
+api_targets = config["api_targets"]
 
 def check_targets(targets):
     report = ""
     for target in targets:
+        attempts = 0
+        success = False
+        while attempts < 3 and not success:
+            attempts += 1
             try:
-                response =  requests.get(target, verify = False)
+                response = requests.get(target, verify=False)
                 if response.status_code == 200 and response.elapsed.total_seconds() < SLOW_THRESHOLD:
-                        status = "UP"
-                        report = report + f'{target} | {status} , {response.status_code} {response.elapsed.total_seconds()}s \n'
+                    status = "UP"
+                    success = True
+                    report = report + f'{target} | {status} , {response.status_code} {response.elapsed.total_seconds()}s \n'
                 elif response.status_code == 200 and response.elapsed.total_seconds() > SLOW_THRESHOLD:
-                        status = "SLOW"
-                        report = report + f'{target} | {status} , {response.status_code} {response.elapsed.total_seconds()}s \n'
+                    status = "SLOW"
+                    success = True
+                    report = report + f'{target} | {status} , {response.status_code} {response.elapsed.total_seconds()}s \n'
                 else:
                     status = "DOWN"
-                    report = report + f'{target} + | {status}\n'
+                    success = False
+                    if attempts == 3:
+                        report = report + f'{target} + | {status}\n'
+
 
             except requests.exceptions.RequestException as e:
                 status = "ERROR"
-                report = report + f'{target} | {status} \n'
+                success = False
+                if attempts == 3:
+                    report = report + f'{target} | {status} \n'
 
     return report
 
@@ -67,6 +80,24 @@ def build_shift_report(report, tally, start, end):
     update = (f'(Results of the health checker: \n {report} \n Total tally of logs: {tally} \n Start time of issue: {start} \n End time of issue: {end}')
     return update
 
+def check_api(targets, expected_field, expected_value):
+    report = ""
+    for target in targets:
+        try:
+                webresponse = requests.get(target, verify = False)
+                data = webresponse.json()
+                if expected_field in data and data[expected_field] == expected_value:
+                    status = "UP"
+                elif data == {}:
+                    status = "ERROR - did not return anything"
+                else:
+                    status = "DOWN"
+        except requests.exceptions.RequestException:
+            status = "ERROR"
+        report += f'{target} | {status} \n'
+    return report
+
+
 def send_teams_message(message):
     payload = {"text": message}
     requests.post(WEBHOOK_URL, json=payload, verify=False)
@@ -77,6 +108,7 @@ parser.add_argument("--check", action = "store_true")
 parser.add_argument("--logs", action = "store_true")
 parser.add_argument("--report", action = "store_true")
 parser.add_argument("--teams", action = "store_true")
+parser.add_argument("--api", action = "store_true")
 args = parser.parse_args()
 
 if args.check:
@@ -95,8 +127,11 @@ if args.report:
     print(build_shift_report(report, tally, start, end))
     if args.teams:
         send_teams_message(build_shift_report(report, tally, start, end))
-
-
+if args.api:
+    report = check_api(api_targets, "completed", False)
+    print(report)
+    if args.teams:
+        send_teams_message(report)
 
 
 
