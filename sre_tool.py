@@ -2,19 +2,14 @@ import requests
 import json
 import urllib3
 import argparse
+import logging
 
 from playwright.sync_api import expect
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from datetime import datetime
+from utils import send_teams_message, WEBHOOK_URL, SLOW_THRESHOLD, targets, api_targets, logger
 
-with open("config.json", "r") as f:
-    config = json.load(f)
-
-WEBHOOK_URL = config["webhook_url"]
-SLOW_THRESHOLD = config["slow_threshold"]
-targets = config["targets"]
-api_targets = config["api_targets"]
 
 def check_targets(targets):
     report = ""
@@ -98,11 +93,6 @@ def check_api(targets, expected_field, expected_value):
     return report
 
 
-def send_teams_message(message):
-    payload = {"text": message}
-    requests.post(WEBHOOK_URL, json=payload, verify=False)
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--check", action = "store_true")
 parser.add_argument("--logs", action = "store_true")
@@ -113,27 +103,38 @@ args = parser.parse_args()
 
 if args.check:
     report = check_targets(targets)
-    print(report)
+    for line in report.strip().split("\n"):
+        if "ERROR" in line:
+            logger.error(line)
+        else:
+            logger.info(line)
     if args.teams:
         send_teams_message(report)
 if args.logs:
     tally, start, end, loglist = log_analyser()
-    print(loglist)
+    for line in loglist.strip().split("\n"):
+        if "ERROR" in line:
+            logger.error(line)
+        else:
+            logger.info(line)
     if args.teams:
         send_teams_message(loglist)
 if args.report:
     report = check_targets(targets)
     tally, start, end, loglist = log_analyser()
-    print(build_shift_report(report, tally, start, end))
+    logger.info(build_shift_report(report, tally, start, end))
     if args.teams:
+        logger.info("Sending to teams")
         send_teams_message(build_shift_report(report, tally, start, end))
 if args.api:
     report = check_api(api_targets, "completed", False)
-    print(report)
+    for line in report.strip().split("\n"):
+        if "DOWN" in line or "ERROR" in line:
+            logger.error(line)
+        else:
+            logger.info(line)
     if args.teams:
         send_teams_message(report)
-
-
 
 
 
