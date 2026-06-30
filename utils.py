@@ -1,4 +1,5 @@
 import logging
+import os
 
 import requests
 import urllib3
@@ -17,7 +18,7 @@ with open("config.json", "r") as f:
     config = json.load(f)
 
 
-WEBHOOK_URL = config["webhook_url"]
+WEBHOOK_URL = os.environ.get("TEAMS_WEBHOOK_URL")
 SLOW_THRESHOLD = config["slow_threshold"]
 targets = config["targets"]
 api_targets = config["api_targets"]
