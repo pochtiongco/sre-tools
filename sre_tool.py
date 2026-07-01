@@ -3,8 +3,8 @@ import json
 import urllib3
 import argparse
 import logging
+import subprocess
 
-from playwright.sync_api import expect
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from datetime import datetime
@@ -92,6 +92,22 @@ def check_api(targets, expected_field, expected_value):
         report += f'{target} | {status} \n'
     return report
 
+def ping_report(targets):
+    report = ""
+    for target in targets:
+        target = target.replace("https://", "")
+        result = subprocess.run(['ping', '-n', '1', target], capture_output=True, text=True)
+        if result.returncode == 0:
+            for line in result.stdout.split("\n"):
+                if "time=" in line:
+                    response_time = line.split("time=")[1].split(" ")[0]
+            report += f'{target} is pingable with response time of {response_time}\n'
+        else:
+            report += f'{target} is not pingable. Aurnaur. \n'
+    return report
+
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--check", action = "store_true")
@@ -99,6 +115,7 @@ parser.add_argument("--logs", action = "store_true")
 parser.add_argument("--report", action = "store_true")
 parser.add_argument("--teams", action = "store_true")
 parser.add_argument("--api", action = "store_true")
+parser.add_argument("--ping", action="store_true")
 args = parser.parse_args()
 
 if args.check:
@@ -130,6 +147,15 @@ if args.api:
     report = check_api(api_targets, "completed", False)
     for line in report.strip().split("\n"):
         if "DOWN" in line or "ERROR" in line:
+            logger.error(line)
+        else:
+            logger.info(line)
+    if args.teams:
+        send_teams_message(report)
+if args.ping:
+    report = ping_report(targets)
+    for line in report.strip().split("\n"):
+        if "Aurnaur" in line:
             logger.error(line)
         else:
             logger.info(line)
