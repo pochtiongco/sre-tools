@@ -32,3 +32,11 @@ python sre_tool.py --check --teams
 1. Clone the repository
 2. Copy `config.example.json` to `config.json` and fill in your targets
 3. Set the following environment variable:
+
+```TEAMS_WEBHOOK_URL=your-teams-webhook-url-here```
+
+4. Install dependencies:
+
+```bash
+pip install requests
+```
