@@ -1,14 +1,11 @@
 import requests
-import json
 import urllib3
 import argparse
-import logging
 import subprocess
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from datetime import datetime
-from utils import send_teams_message, WEBHOOK_URL, SLOW_THRESHOLD, targets, api_targets, logger
+from utils import send_teams_message, SLOW_THRESHOLD, targets, api_targets, logger
 
 
 def check_targets(targets):
@@ -32,7 +29,7 @@ def check_targets(targets):
                     status = "DOWN"
                     success = False
                     if attempts == 3:
-                        report = report + f'{target} + | {status}\n'
+                        report = report + f'{target} | {status}\n'
 
 
             except requests.exceptions.RequestException as e:
@@ -57,15 +54,11 @@ def log_analyser():
             elif logline[2] == 'WARNING':
                 if logline[2] == 'WARNING' and tally['WARNING'] == 0 and tally['ERROR'] == 0:
                     start = logline[0] + " " + logline[1]
-                else:
-                    pass
                 tally['WARNING'] +=1
             else:
 
                 if logline[2] == 'ERROR' and tally['WARNING'] == 0 and tally['ERROR'] == 0:
                     start = logline[0] + " " + logline[1]
-                else:
-                    pass
                 tally['ERROR'] += 1
                 end = logline[0] + " " + logline[1]
 
@@ -106,7 +99,12 @@ def ping_report(targets):
             report += f'{target} is not pingable. Aurnaur. \n'
     return report
 
-
+def log_report(report, error_keywords=("ERROR","DOWN","Aurnaur")):
+    for line in report.strip().split("\n"):
+        if any(keyword in line for keyword in error_keywords):
+            logger.error(line)
+        else:
+            logger.info(line)
 
 
 parser = argparse.ArgumentParser()
@@ -120,20 +118,12 @@ args = parser.parse_args()
 
 if args.check:
     report = check_targets(targets)
-    for line in report.strip().split("\n"):
-        if "ERROR" in line:
-            logger.error(line)
-        else:
-            logger.info(line)
+    log_report(report)
     if args.teams:
         send_teams_message(report)
 if args.logs:
     tally, start, end, loglist = log_analyser()
-    for line in loglist.strip().split("\n"):
-        if "ERROR" in line:
-            logger.error(line)
-        else:
-            logger.info(line)
+    log_report(loglist)
     if args.teams:
         send_teams_message(loglist)
 if args.report:
@@ -141,24 +131,16 @@ if args.report:
     tally, start, end, loglist = log_analyser()
     logger.info(build_shift_report(report, tally, start, end))
     if args.teams:
-        logger.info("Sending to teams")
         send_teams_message(build_shift_report(report, tally, start, end))
 if args.api:
     report = check_api(api_targets, "completed", False)
-    for line in report.strip().split("\n"):
-        if "DOWN" in line or "ERROR" in line:
-            logger.error(line)
-        else:
-            logger.info(line)
+    log_report(report)
     if args.teams:
         send_teams_message(report)
 if args.ping:
     report = ping_report(targets)
-    for line in report.strip().split("\n"):
-        if "Aurnaur" in line:
-            logger.error(line)
-        else:
-            logger.info(line)
+    log_report(report)
+
     if args.teams:
         send_teams_message(report)
 
